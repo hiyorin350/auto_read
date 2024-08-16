@@ -1,0 +1,2 @@
+ビルドは npm run build
+立ち上げは app.jsを実行

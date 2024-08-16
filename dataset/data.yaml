@@ -1,0 +1,5 @@
+train: /Users/hiyori/YOLO_test/dataset/images/train  # 訓練データの画像パス
+val: /Users/hiyori/YOLO_test/dataset/images/val      # 検証データの画像パス
+
+nc: 8  # クラス数
+names: ['meter', 'unit', 'min_value', 'max_value', 'needle', 'next_value', 'near_value', 'no_unit']  # クラス名リスト

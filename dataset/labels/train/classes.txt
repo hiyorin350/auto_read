@@ -1,0 +1,8 @@
+meter
+needle
+min_value
+max_value
+next_value
+unit
+near_value
+no_unit
