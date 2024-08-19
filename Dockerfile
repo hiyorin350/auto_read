@@ -65,6 +65,9 @@ RUN python3.8 -m pip install --default-timeout=1000 -r requirements.txt
 # アプリケーションのソースをコピー
 COPY . .
 
+# Reactアプリケーションをビルド
+RUN npm run build
+
 # 必要なディレクトリを作成
 RUN mkdir -p uploads
 
