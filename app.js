@@ -3,7 +3,7 @@ const multer = require('multer');
 const { exec } = require('child_process');
 const path = require('path');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // MIMEタイプの設定
 app.get('*.js', (req, res, next) => {
