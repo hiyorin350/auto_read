@@ -50,14 +50,14 @@ function ContentDisplay({ uploadedFile, file, meterData, setMeterData }) {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:3000/upload', {
+      const response = await fetch('https://auto-read.onrender.com/upload', { // ここにRenderのURLを記述
         method: 'POST',
         body: formData
       });
-
+    
       if (!response.ok) {
         throw new Error('サーバーエラー');
-      }
+      }    
 
       const result = await response.json(); // JSON形式でデータを受け取る
 
