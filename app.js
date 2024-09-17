@@ -46,22 +46,42 @@ const upload = multer({ storage: storage });
 // ファイルアップロードのエンドポイント
 app.post('/upload', upload.single('file'), function (req, res, next) {
   const data = req.file; // クライアントから送られてきたデータ
+  const { maxValue, minValue } = req.body; // クライアントから送られてきたmaxValueとminValueを取得
+  console.log('maxValue:', maxValue); // これらの値をログに出力
+  console.log('minValue:', minValue);
 
+  if (!maxValue || !minValue) {
+    return res.status(400).send('maxValueまたはminValueが提供されていません');
+  }  
+
+//   // Pythonスクリプトを実行し、データを渡す
+//   exec(`python3 /app/main.py '${data.path}'`, (error, stdout, stderr) => {
+//     if (error) {
+//       console.error(`exec error: ${error}`);
+//       console.log(`stdout: ${stdout}`);
+//       console.error(`stderr: ${stderr}`);
+//       return res.status(500).send('Python script execution failed');
+//     }
+//     if (stderr) {
+//       console.error(`stderr: ${stderr}`);
+//     }
+
+//     // printの出力結果を確認
+//     console.log(stdout);
+
+//     // ファイルのアップロード成功メッセージとPythonスクリプトの実行結果を一緒にクライアントに返却
+//     res.status(200).send(stdout);
+//   });
+// });
   // Pythonスクリプトを実行し、データを渡す
-  exec(`python3 /app/main.py '${data.path}'`, (error, stdout, stderr) => {
+  exec(`python3 main.py '${data.path}' ${maxValue} ${minValue}`, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
-      console.log(`stdout: ${stdout}`);
-      console.error(`stderr: ${stderr}`);
       return res.status(500).send('Python script execution failed');
     }
     if (stderr) {
       console.error(`stderr: ${stderr}`);
     }
-
-    // printの出力結果を確認
-    console.log(stdout);
-
     // ファイルのアップロード成功メッセージとPythonスクリプトの実行結果を一緒にクライアントに返却
     res.status(200).send(stdout);
   });

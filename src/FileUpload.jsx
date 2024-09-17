@@ -4,7 +4,10 @@ import { ChakraProvider, Button, Heading, Box, Input, FormControl, FormLabel, VS
 function App() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [file, setFile] = useState(null);
-  const [meterData, setMeterData] = useState({ maxValue: '', minValue: '' }); // 追加
+  const [meterData, setMeterData] = useState({ maxValue: '', minValue: '' });
+  const [tempMaxValue, setTempMaxValue] = useState(''); // 一時的な最大値
+  const [tempMinValue, setTempMinValue] = useState(''); // 一時的な最小値
+  const [value, setValue] = useState(''); // "値" フィールドの状態を管理する
 
   return (
     <ChakraProvider>
@@ -12,7 +15,18 @@ function App() {
         <Heading mb={4}>autoread</Heading>
         <VStack spacing={5} align="stretch">
           <FileUpload setUploadedFile={setUploadedFile} setFile={setFile} />
-          <ContentDisplay uploadedFile={uploadedFile} file={file} meterData={meterData} setMeterData={setMeterData} />
+          <ContentDisplay 
+            uploadedFile={uploadedFile} 
+            file={file} 
+            meterData={meterData} 
+            setMeterData={setMeterData}
+            tempMaxValue={tempMaxValue}
+            setTempMaxValue={setTempMaxValue}
+            tempMinValue={tempMinValue}
+            setTempMinValue={setTempMinValue}
+            value={value} // "値" フィールドの値を渡す
+            setValue={setValue} // "値" フィールドを更新するための関数を渡す
+          />
         </VStack>
       </Box>
     </ChakraProvider>
@@ -39,36 +53,42 @@ function FileUpload({ setUploadedFile, setFile }) {
   );
 }
 
-function ContentDisplay({ uploadedFile, file, meterData, setMeterData }) {
+function ContentDisplay({ uploadedFile, file, meterData, setMeterData, tempMaxValue, setTempMaxValue, tempMinValue, setTempMinValue, value, setValue }) {
   const handleAutoRead = async () => {
     if (!file) {
       alert('ファイルを選択してください。');
       return;
     }
 
+    // 自動読み取りが押されたときに meterData を更新
+    setMeterData({ maxValue: tempMaxValue, minValue: tempMinValue });
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('maxValue', tempMaxValue); // maxValue をフォームデータに追加
+    formData.append('minValue', tempMinValue); // minValue をフォームデータに追加
 
     try {
-      const response = await fetch('https://auto-read.onrender.com/upload', { // ここにRenderのURLを記述
+      const response = await fetch('http://localhost:3000/upload', {
         method: 'POST',
         body: formData
       });
-    
+
       if (!response.ok) {
         throw new Error('サーバーエラー');
-      }    
+      }
 
       const result = await response.json(); // JSON形式でデータを受け取る
 
-      // result.Endとresult.Startが数字かどうかをチェックして状態に保存
       const isNumeric = (value) => !isNaN(value) && !isNaN(parseFloat(value));
       setMeterData({
         maxValue: isNumeric(result.End) ? result.End : '',
         minValue: isNumeric(result.Start) ? result.Start : ''
       });
 
-      // アップロードが成功した場合の処理
+      // "値" フィールドにサーバーから受け取った result_value を小数点以下3桁にして表示
+      setValue(parseFloat(result.result_value).toFixed(3));
+
       alert('ファイルアップロード成功');
     } catch (error) {
       console.error('アップロードエラー:', error);
@@ -79,7 +99,15 @@ function ContentDisplay({ uploadedFile, file, meterData, setMeterData }) {
   return (
     <HStack align="start" spacing={10}>
       <ImageDisplay uploadedFile={uploadedFile} />
-      <MeterForm handleAutoRead={handleAutoRead} meterData={meterData} />
+      <MeterForm 
+        handleAutoRead={handleAutoRead} 
+        tempMaxValue={tempMaxValue} 
+        setTempMaxValue={setTempMaxValue} 
+        tempMinValue={tempMinValue} 
+        setTempMinValue={setTempMinValue} 
+        value={value} // "値" フィールドの値を渡す
+        setValue={setValue} // "値" フィールドを更新するための関数を渡す
+      />
     </HStack>
   );
 }
@@ -93,18 +121,15 @@ function ImageDisplay({ uploadedFile }) {
   );
 }
 
-function MeterForm({ handleAutoRead, meterData }) {
+function MeterForm({ handleAutoRead, tempMaxValue, setTempMaxValue, tempMinValue, setTempMinValue, value, setValue }) {
   const [meterName, setMeterName] = useState('');
-  const [maxValue, setMaxValue] = useState('');
-  const [minValue, setMinValue] = useState('');
   const [unit, setUnit] = useState('');
-  const [value, setValue] = useState('');
 
   const handleDownload = () => {
     const data = {
       meterName,
-      maxValue,
-      minValue,
+      maxValue: tempMaxValue,
+      minValue: tempMinValue,
       unit,
       value,
     };
@@ -126,11 +151,19 @@ function MeterForm({ handleAutoRead, meterData }) {
       </FormControl>
       <FormControl mb={4}>
         <FormLabel>最大値</FormLabel>
-        <Input type="text" value={maxValue || meterData.maxValue} onChange={(e) => setMaxValue(e.target.value)} />
+        <Input
+          type="text"
+          value={tempMaxValue}
+          onChange={(e) => setTempMaxValue(e.target.value)}
+        />
       </FormControl>
       <FormControl mb={4}>
         <FormLabel>最小値</FormLabel>
-        <Input type="text" value={minValue || meterData.minValue} onChange={(e) => setMinValue(e.target.value)} />
+        <Input
+          type="text"
+          value={tempMinValue}
+          onChange={(e) => setTempMinValue(e.target.value)}
+        />
       </FormControl>
       <FormControl mb={4}>
         <FormLabel>単位</FormLabel>

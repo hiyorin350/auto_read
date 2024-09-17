@@ -7,11 +7,49 @@ import sys
 import json
 from inference_sdk import InferenceHTTPClient
 
+def calculate_angles_and_ratios(center, start, end, tip):
+    """指定された計算式を使用して、角度と割合を計算"""
+
+    def calculate_angle_with_xy_inversion_180(center, point):
+        if isinstance(center, dict) and isinstance(point, dict):
+            delta_x = center.get('x', 0) - point.get('x', 0)  # X軸の反転を考慮
+            delta_y = center.get('y', 0) - point.get('y', 0)  # Y軸の反転を考慮
+        else:
+            delta_x = center[0] - point[0]  # X軸の反転を考慮
+            delta_y = center[1] - point[1]  # Y軸の反転を考慮
+        angle = np.arctan2(delta_y, delta_x)
+        angle_degrees = np.degrees(angle)  # 度数法での角度を返す
+        
+        # 角度を -180 度から 180 度の範囲に収める
+        if angle_degrees > 180:
+            angle_degrees -= 360
+        return angle_degrees
+    
+    # centerと各点の間の角度を計算
+    angle_start = calculate_angle_with_xy_inversion_180(center, start)
+    angle_end = calculate_angle_with_xy_inversion_180(center, end)
+    angle_tip = calculate_angle_with_xy_inversion_180(center, tip)
+
+    # 提示された計算式に基づいて角度の差を計算
+    total_angle = 360 + angle_end - angle_start
+    tip_angle = angle_tip - angle_start
+    
+    # print(f"Total angle (360 + end - start): {total_angle:.2f} degrees")
+    # print(f"Tip angle (tip - start): {tip_angle:.2f} degrees")
+    
+    # 割合を計算
+    angle_ratio = tip_angle / total_angle
+    # print(f"Ratio of tip angle to total angle: {angle_ratio:.2f}")
+
+    return total_angle, tip_angle, angle_ratio
+
 # sys.pathにyolov5を追加
 sys.path.append('/app/yolov5')
 
 # コマンドライン引数からデータを取得
 image_path = sys.argv[1]
+max_value = float(sys.argv[2])  # max_valueを取得し、浮動小数点に変換
+min_value = float(sys.argv[3])  # min_valueを取得し、浮動小数点に変換
 
 try:
     CLIENT = InferenceHTTPClient(
@@ -41,37 +79,19 @@ for prediction in result['predictions']:
     if class_name not in best_predictions or prediction['confidence'] > best_predictions[class_name]['confidence']:
         best_predictions[class_name] = prediction
 
-# StartとEndの値を読み取る
+# Start, End, Center, Tipの座標を読み取る
 start_prediction = best_predictions.get('Start')
 end_prediction = best_predictions.get('End')
+center_prediction = best_predictions.get('Center')
+tip_prediction = best_predictions.get('Tip')
 
-# OCRを適用して数値を読み取る関数
-def apply_ocr_on_prediction(image, prediction):
-    if prediction:
-        x, y, width, height = int(prediction['x']), int(prediction['y']), int(prediction['width']), int(prediction['height'])
-        region = image[y:y+height, x:x+width]
-        
-        # 前処理: グレースケール化と閾値処理
-        gray_region = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
-        _, thresh_region = cv2.threshold(gray_region, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # Tesseract OCRで数値のみを読み取る
-        custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789.'
-        text = pytesseract.image_to_string(thresh_region, config=custom_config).strip()
-        
-        # 数値のみを抽出
-        numeric_text = ''.join(filter(lambda c: c.isdigit() or c == '.', text))
-        return numeric_text
-    else:
-        return None
+# 角度と割合を計算
+total_angle, tip_angle, angle_ratio = calculate_angles_and_ratios(center_prediction, start_prediction, end_prediction, tip_prediction)
 
-# StartとEndにOCRを適用
-start_text = apply_ocr_on_prediction(image, start_prediction)
-end_text = apply_ocr_on_prediction(image, end_prediction)
+result_value = angle_ratio * (max_value - min_value)
 
 # 結果をJSON形式で出力
 result_json = {
-    "Start": start_text if start_text else None,
-    "End": end_text if end_text else None
+    "result_value": result_value if result_value else None
 }
 print(json.dumps(result_json))
