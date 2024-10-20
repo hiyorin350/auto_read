@@ -110,7 +110,7 @@ function ContentDisplay({
     setIsIndeterminate(true); // アニメーション開始
 
     try {
-      const response = await fetch('http://localhost:3000/upload', {
+      const response = await fetch('https://auto-read.onrender.com/upload', {
         method: "POST",
         body: formData,
       });
